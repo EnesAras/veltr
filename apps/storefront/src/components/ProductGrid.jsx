@@ -1,33 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import HeroScene from "./HeroScene";
+import FeaturedCards from "./FeaturedCards";
+import { SHOWCASE_TILES, FALLBACK_IMAGE } from "../../../../shared/data/products.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
-const PLACEHOLDER_MEDIA = "/assets/veltr/media-placeholder.svg";
-
-const SHOWCASE_TILES = [
-  {
-    id: "veltr-aero-flagship",
-    title: "VELTR Aero Flagship",
-    accent: "Flagship over-ear studio",
-    tagline: "Carbon fiber headband, dual X drivers, and 40-hour battery for cinematic listening, anytime.",
-    image: "/assets/veltr/tile-01.jpg"
-  },
-  {
-    id: "veltr-echo-earbuds",
-    title: "VELTR Echo Wireless Earbuds",
-    accent: "True wireless Earbuds",
-    tagline: "Spatial audio, adaptive EQ, and a sculpted titanium stem that disappears in the ear.",
-    image: "/assets/veltr/tile-02.jpg"
-  },
-  {
-    id: "veltr-arc-stand",
-    title: "VELTR Arc Charging Stand",
-    accent: "Accessories / charging",
-    tagline: "Magnetic cradle and balanced stand that doubles as a lighting sculpted display for your set.",
-    image: "/assets/veltr/tile-03.jpg"
-  }
-];
 
 export default function ProductGrid({ initialCategory }) {
   const [categories, setCategories] = useState([]);
@@ -119,7 +96,7 @@ export default function ProductGrid({ initialCategory }) {
     const target = event.currentTarget;
     if (target) {
       target.onerror = null;
-      target.src = PLACEHOLDER_MEDIA;
+      target.src = FALLBACK_IMAGE;
     }
   };
 
@@ -129,6 +106,7 @@ export default function ProductGrid({ initialCategory }) {
     <>
       <HeroScene />
       <main className="storefront-shell">
+        <FeaturedCards />
         <section className="audio-showcase" aria-label="VELTR audio highlights">
           {SHOWCASE_TILES.map((tile) => (
             <article key={tile.id} className="audio-showcase__tile">

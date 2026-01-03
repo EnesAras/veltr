@@ -1,18 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "./AuthContext";
 
-const STORAGE_KEY = "veltr_cart_v1";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
+const GUEST_KEY = "cart:guest";
 
-const CartContext = createContext(null);
-
-function safeReadStorage() {
-  if (typeof window === "undefined") {
-    return [];
-  }
+function safeParse(raw) {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      return [];
-    }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) {
       return [];
@@ -23,90 +16,227 @@ function safeReadStorage() {
   }
 }
 
+function hydrateCartEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  return entries
+    .map((entry) => {
+      if (!entry) {
+        return null;
+      }
+      const productId = entry.productId ?? entry.id;
+      if (!productId) {
+        return null;
+      }
+      return {
+        ...entry,
+        productId,
+        id: entry.id ?? productId
+      };
+    })
+    .filter(Boolean);
+}
+
+function readStoredCart(key) {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return [];
+    }
+    return hydrateCartEntries(safeParse(raw));
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredCart(key, data) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(data));
+  } catch {
+    // ignore
+  }
+}
+
+const CartContext = createContext(null);
+
 export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => safeReadStorage());
+  const { user, token } = useAuth();
+  const [items, setItems] = useState(() => readStoredCart(GUEST_KEY));
+  const [loading, setLoading] = useState(false);
+  const skipSyncRef = useRef(false);
+  const prevUserIdRef = useRef(null);
+
+  const storageKey = user ? `cart:${user.id}` : GUEST_KEY;
+
+  const persist = (nextItems) => {
+    writeStoredCart(storageKey, nextItems);
+  };
+
+  const applyServerItems = (nextItems) => {
+    const normalized = hydrateCartEntries(nextItems);
+    skipSyncRef.current = true;
+    setItems(normalized);
+    persist(normalized);
+    skipSyncRef.current = false;
+  };
+
+  const syncCartToServer = async (nextItems) => {
+    if (!user || !token || skipSyncRef.current) {
+      return;
+    }
+    const payload = nextItems.map((entry) => ({ productId: entry.productId, qty: entry.qty }));
+    try {
+      await fetch(`${API_BASE}/api/cart`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ items: payload })
+      });
+    } catch (error) {
+      console.error("Failed to sync cart", error);
+    }
+  };
+
+  const loadUserCart = async () => {
+    if (!user || !token) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/cart`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const payload = await response.json();
+      if (response.ok) {
+        applyServerItems(payload.items ?? []);
+      }
+    } catch (error) {
+      console.error("Unable to load cart", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const mergeGuestCart = async () => {
+    if (!user || !token) {
+      return;
+    }
+    const guestItems = readStoredCart(GUEST_KEY);
+    if (!guestItems.length) {
+      await loadUserCart();
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/cart/merge`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ items: guestItems })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to merge cart");
+      }
+      applyServerItems(payload.items ?? []);
+      writeStoredCart(GUEST_KEY, []);
+    } catch (error) {
+      console.error("Cart merge failed", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
+    if (!user) {
+    setItems(readStoredCart(GUEST_KEY));
+    return;
+  }
+    if (prevUserIdRef.current !== user.id) {
+      mergeGuestCart();
+    } else {
+      loadUserCart();
     }
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // ignore storage errors
-    }
-  }, [items]);
+    prevUserIdRef.current = user.id;
+  }, [user?.id, token]);
+
+  const updateCart = (nextItems) => {
+    const normalized = hydrateCartEntries(nextItems);
+    setItems(normalized);
+    persist(normalized);
+    syncCartToServer(normalized);
+  };
 
   const addItem = (product, qty = 1) => {
-    if (!product?.id || qty <= 0) {
+    const productId = product?.id ?? product?.productId;
+    if (!productId || qty <= 0) {
       return;
     }
-
-    setItems((current) => {
-      const existing = current.find((entry) => entry.id === product.id);
-      if (existing) {
-        return current.map((entry) =>
-          entry.id === product.id
-            ? {
-                ...entry,
-                qty: entry.qty + qty
-              }
-            : entry
-        );
-      }
-      return [
-        ...current,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          qty
-        }
-      ];
-    });
+    const next = [...items];
+    const existingIndex = next.findIndex((entry) => entry.productId === productId);
+    if (existingIndex >= 0) {
+      next[existingIndex] = {
+        ...next[existingIndex],
+        qty: next[existingIndex].qty + qty
+      };
+    } else {
+      next.push({
+        productId,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        qty,
+        id: productId
+      });
+    }
+    updateCart(next);
   };
 
-  const removeItem = (id) => {
-    setItems((current) => current.filter((entry) => entry.id !== id));
+  const removeItem = (productId) => {
+    const next = items.filter((entry) => entry.productId !== productId);
+    updateCart(next);
   };
 
-  const setQty = (id, qty) => {
+  const setQty = (productId, qty) => {
     const normalized = Math.floor(Number(qty));
     if (Number.isNaN(normalized)) {
       return;
     }
-
     if (normalized <= 0) {
-      setItems((current) => current.filter((entry) => entry.id !== id));
+      removeItem(productId);
       return;
     }
-
-    setItems((current) =>
-      current.map((entry) =>
-        entry.id === id
-          ? {
-              ...entry,
-              qty: normalized
-            }
-          : entry
-      )
+    const next = items.map((entry) =>
+      entry.productId === productId
+        ? { ...entry, qty: normalized }
+        : entry
     );
+    updateCart(next);
   };
 
   const clear = () => {
-    setItems([]);
+    updateCart([]);
   };
 
   const totalItems = useMemo(() => items.reduce((acc, entry) => acc + entry.qty, 0), [items]);
-
-  const subtotal = useMemo(
-    () => items.reduce((acc, entry) => acc + entry.price * entry.qty, 0),
-    [items]
-  );
+  const subtotal = useMemo(() => items.reduce((acc, entry) => acc + entry.price * entry.qty, 0), [items]);
 
   const value = {
     items,
+    loading,
     addItem,
     removeItem,
     setQty,

@@ -1,26 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-const SLIDES = [
-  {
-    id: "veltr-hero-01",
-    type: "image",
-    label: "Veltr Aero Flagship",
-    src: "/assets/veltr/hero-01.jpg"
-  },
-  {
-    id: "veltr-hero-02",
-    type: "image",
-    label: "Veltr Echo Earbuds",
-    src: "/assets/veltr/hero-02.jpg"
-  },
-  {
-    id: "veltr-hero-03",
-    type: "image",
-    label: "Veltr Nova Studio",
-    src: "/assets/veltr/hero-03.jpg"
-  }
-];
-const PLACEHOLDER_MEDIA = "/assets/veltr/media-placeholder.svg";
+import { HERO_IMAGES, FALLBACK_IMAGE } from "../../../../shared/data/products.js";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -34,6 +13,8 @@ export default function HeroScene() {
   const [dragging, setDragging] = useState(false);
   const [hover, setHover] = useState(false);
   const pauseRef = useRef(false);
+  const slides = HERO_IMAGES;
+  const fallbackImage = FALLBACK_IMAGE;
 
   useEffect(() => {
     const updateSlideSize = () => {
@@ -74,7 +55,7 @@ export default function HeroScene() {
       if (pauseRef.current || dragging) {
         return;
       }
-      setCurrent((prev) => (prev + 1) % SLIDES.length);
+      setCurrent((prev) => (prev + 1) % slides.length);
     };
     const interval = setInterval(advance, 3500);
     return () => clearInterval(interval);
@@ -113,7 +94,7 @@ export default function HeroScene() {
     setDragging(false);
     pauseRef.current = false;
     const index = Math.round(railRef.current.scrollLeft / Math.max(slideSizeRef.current, 1));
-    setCurrent(clamp(index, 0, SLIDES.length - 1));
+    setCurrent(clamp(index, 0, slides.length - 1));
   };
 
   const handleScrollHintStart = () => {
@@ -123,23 +104,23 @@ export default function HeroScene() {
     pauseRef.current = false;
   };
 
+  const handleImageError = (event) => {
+    const target = event.currentTarget;
+    if (target) {
+      target.onerror = null;
+      target.src = fallbackImage;
+    }
+  };
+
   const goToSlide = (offset) => {
     pauseRef.current = true;
     setCurrent((value) => {
-      const next = (value + offset + SLIDES.length) % SLIDES.length;
+      const next = (value + offset + slides.length) % slides.length;
       return next;
     });
     setTimeout(() => {
       pauseRef.current = false;
     }, 400);
-  };
-
-  const handleImageError = (event) => {
-    const target = event.currentTarget;
-    if (target) {
-      target.onerror = null;
-      target.src = PLACEHOLDER_MEDIA;
-    }
   };
 
   return (
@@ -158,28 +139,14 @@ export default function HeroScene() {
       >
         <div className="hero-media">
           <div className="hero-carousel" ref={railRef}>
-            {SLIDES.map((slide) => (
+            {slides.map((slide) => (
               <div key={slide.id} className="hero-carousel__slide">
-              {slide.type === "video" ? (
-                <video
-                  className="hero-video"
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  preload="metadata"
-                  poster={slide.poster}
-                >
-                  <source src={slide.src} type="video/mp4" />
-                </video>
-              ) : (
                 <img
-                  src={slide.src}
-                  alt={slide.label || "VELTR scene"}
+                  src={slide.image}
+                  alt={slide.title}
                   className="hero-video"
                   onError={handleImageError}
                 />
-              )}
                 <div className="hero-carousel__overlay" />
               </div>
             ))}

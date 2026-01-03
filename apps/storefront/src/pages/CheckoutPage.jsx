@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
+import { useAuth } from "../contexts/AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
 
 export default function CheckoutPage() {
   const { items, subtotal } = useCart();
+  const { token } = useAuth();
   const [rates, setRates] = useState([]);
   const [selectedRate, setSelectedRate] = useState(null);
   const [loadingRates, setLoadingRates] = useState(true);
   const [ratesError, setRatesError] = useState(null);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState("");
 
   useEffect(() => {
     async function loadRates() {
@@ -36,6 +40,36 @@ export default function CheckoutPage() {
   const shippingCost =
     rates.find((rate) => rate.id === selectedRate)?.price ?? 0;
   const grandTotal = subtotal + shippingCost;
+
+  const handlePay = async () => {
+    if (!token) {
+      setPayError("You must be signed in to checkout.");
+      return;
+    }
+    setPayError("");
+    setPayLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/checkout/session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          shippingRateId: selectedRate
+        })
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to create checkout session");
+      }
+      window.location.href = payload.url;
+    } catch (error) {
+      setPayError(error.message);
+    } finally {
+      setPayLoading(false);
+    }
+  };
 
   return (
     <main className="storefront-shell">
@@ -109,8 +143,14 @@ export default function CheckoutPage() {
             <p>Total</p>
             <p>${grandTotal.toFixed(2)}</p>
           </div>
-          <button type="button" className="cta checkout-cta" disabled>
-            Pay with Stripe
+          {payError && <p className="status status-error">{payError}</p>}
+          <button
+            type="button"
+            className="cta checkout-cta"
+            disabled={payLoading || items.length === 0}
+            onClick={handlePay}
+          >
+            {payLoading ? "Preparing checkout…" : "Pay with Stripe"}
           </button>
           <Link to="/cart" className="nav-link">
             Back to Cart ({items.length} items)
