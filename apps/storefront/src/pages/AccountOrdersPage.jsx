@@ -1,52 +1,46 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import EmptyState from "../components/EmptyState";
+import InlineError from "../components/InlineError";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
 
 export default function AccountOrdersPage() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/api/orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to load orders");
+      }
+      setOrders(payload.orders ?? []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
       setLoading(false);
       return;
     }
-    let active = true;
-    const loadOrders = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const response = await fetch(`${API_BASE}/api/orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload?.error ?? "Unable to load orders");
-        }
-        if (active) {
-          setOrders(payload.orders ?? []);
-        }
-      } catch (err) {
-        if (active) {
-          setError(err.message);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
     loadOrders();
-    return () => {
-      active = false;
-    };
-  }, [token]);
+  }, [token, loadOrders]);
 
   const formattedOrders = useMemo(
     () =>
@@ -73,12 +67,32 @@ export default function AccountOrdersPage() {
         <p className="lede">
           Every Veltr purchase lives here. We keep receipts, shipping, and order details in one place.
         </p>
-        {loading && <p className="status">Loading your orders…</p>}
-        {error && <p className="status status-error">{error}</p>}
-        {!loading && !formattedOrders.length && !error && (
-          <p className="status">No orders yet. Place your first order and it will show up here instantly.</p>
+        {loading && (
+          <div className="order-records__skeletons">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <article key={`skeleton-${index}`} className="order-record order-record--skeleton">
+                <div className="order-record__header">
+                  <div className="skeleton-line skeleton-line--title" />
+                  <div className="skeleton-line skeleton-line--small" />
+                </div>
+                <div className="skeleton-line" />
+                <div className="skeleton-line skeleton-line--button" />
+              </article>
+            ))}
+          </div>
         )}
-        {formattedOrders.map((order) => (
+        {error && !loading && <InlineError title="Unable to load orders" body={error} onRetry={loadOrders} />}
+        {!loading && !error && !formattedOrders.length && (
+        <EmptyState
+          title="No orders yet"
+          body="When you place an order, it will appear here instantly."
+          actionLabel="Start shopping"
+          onAction={() => navigate("/")}
+        />
+        )}
+        {!loading &&
+          !error &&
+          formattedOrders.map((order) => (
           <article key={order.id} className="order-record">
             <header>
               <div>

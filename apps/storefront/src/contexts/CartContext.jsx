@@ -70,8 +70,10 @@ export function CartProvider({ children }) {
   const { user, token } = useAuth();
   const [items, setItems] = useState(() => readStoredCart(GUEST_KEY));
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const skipSyncRef = useRef(false);
   const prevUserIdRef = useRef(null);
+  const retryRef = useRef(null);
 
   const storageKey = user ? `cart:${user.id}` : GUEST_KEY;
 
@@ -107,10 +109,12 @@ export function CartProvider({ children }) {
   };
 
   const loadUserCart = async () => {
+    retryRef.current = loadUserCart;
     if (!user || !token) {
       return;
     }
     setLoading(true);
+    setError("");
     try {
       const response = await fetch(`${API_BASE}/api/cart`, {
         headers: {
@@ -122,6 +126,7 @@ export function CartProvider({ children }) {
         applyServerItems(payload.items ?? []);
       }
     } catch (error) {
+      setError(error.message);
       console.error("Unable to load cart", error);
     } finally {
       setLoading(false);
@@ -129,6 +134,7 @@ export function CartProvider({ children }) {
   };
 
   const mergeGuestCart = async () => {
+    retryRef.current = mergeGuestCart;
     if (!user || !token) {
       return;
     }
@@ -138,6 +144,7 @@ export function CartProvider({ children }) {
       return;
     }
     setLoading(true);
+    setError("");
     try {
       const response = await fetch(`${API_BASE}/api/cart/merge`, {
         method: "POST",
@@ -154,6 +161,7 @@ export function CartProvider({ children }) {
       applyServerItems(payload.items ?? []);
       writeStoredCart(GUEST_KEY, []);
     } catch (error) {
+      setError(error.message);
       console.error("Cart merge failed", error);
     } finally {
       setLoading(false);
@@ -234,9 +242,15 @@ export function CartProvider({ children }) {
   const totalItems = useMemo(() => items.reduce((acc, entry) => acc + entry.qty, 0), [items]);
   const subtotal = useMemo(() => items.reduce((acc, entry) => acc + entry.price * entry.qty, 0), [items]);
 
+  const retryCart = () => {
+    retryRef.current?.();
+  };
+
   const value = {
     items,
     loading,
+    error,
+    retryCart,
     addItem,
     removeItem,
     setQty,

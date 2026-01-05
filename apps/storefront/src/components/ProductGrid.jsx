@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import HeroScene from "./HeroScene";
 import FeaturedCards from "./FeaturedCards";
 import { useCart } from "../contexts/CartContext";
+import SkeletonCard from "./SkeletonCard";
+import EmptyState from "./EmptyState";
+import InlineError from "./InlineError";
 import { SHOWCASE_TILES, FALLBACK_IMAGE } from "../../../../shared/data/products.js";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
@@ -49,38 +52,38 @@ export default function ProductGrid({ initialCategory }) {
     loadCategories();
   }, []);
 
-  useEffect(() => {
-    async function loadProducts() {
-      setLoading(true);
-      setError(null);
-      try {
-        const params = new URLSearchParams();
-        if (search) params.set("q", search);
-        if (category) params.set("category", category);
-        if (minPrice) params.set("minPrice", minPrice);
-        if (maxPrice) params.set("maxPrice", maxPrice);
-        if (sort) params.set("sort", sort);
-        params.set("page", String(page));
-        params.set("limit", String(limit));
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("q", search);
+      if (category) params.set("category", category);
+      if (minPrice) params.set("minPrice", minPrice);
+      if (maxPrice) params.set("maxPrice", maxPrice);
+      if (sort) params.set("sort", sort);
+      params.set("page", String(page));
+      params.set("limit", String(limit));
 
-        const response = await fetch(`${API_BASE}/api/products?${params.toString()}`);
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload?.error ?? "Unable to load products");
-        }
-
-        setProducts(payload.items ?? []);
-        setMeta(payload.meta ?? { page, limit, total: 0, pages: 1 });
-      } catch (err) {
-        setProducts([]);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      const response = await fetch(`${API_BASE}/api/products?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error ?? "Unable to load products");
       }
-    }
 
-    loadProducts();
+      setProducts(payload.items ?? []);
+      setMeta(payload.meta ?? { page, limit, total: 0, pages: 1 });
+    } catch (err) {
+      setProducts([]);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, [search, category, sort, minPrice, maxPrice, page]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   function handleCategoryLink(slug) {
     if (slug) {
@@ -93,6 +96,16 @@ export default function ProductGrid({ initialCategory }) {
   function handlePageChange(delta) {
     setPage((value) => Math.max(1, value + delta));
   }
+
+  const clearFilters = () => {
+    setSearch("");
+    setMinPrice("");
+    setMaxPrice("");
+    setSort("newest");
+    setCategory("");
+    setPage(1);
+    navigate("/");
+  };
 
   const handleTileImageError = (event) => {
     const target = event.currentTarget;
@@ -208,10 +221,28 @@ export default function ProductGrid({ initialCategory }) {
             </section>
 
             <section className="products-grid">
-              {loading && <p className="status">Loading products…</p>}
-              {error && !loading && <p className="status status-error">{error}</p>}
-              {!loading && !error && !hasProducts && <p className="status">No products match that filter.</p>}
+              {loading &&
+                Array.from({ length: limit }).map((_, index) => (
+                  <SkeletonCard key={`skeleton-${index}`} />
+                ))}
+
+              {!loading && error && (
+                <InlineError title="Unable to load products" body={error} onRetry={fetchProducts} />
+              )}
+
+              {!loading && !error && !hasProducts && (
+                <EmptyState
+                  title="No products found"
+                  body="Try tweaking your filters or search to discover the perfect gear."
+                  actionLabel="Clear filters"
+                  onAction={clearFilters}
+                  secondaryLabel="Back to home"
+                  secondaryOnClick={() => navigate("/")}
+                />
+              )}
+
               {!loading &&
+                !error &&
                 hasProducts &&
                 products.map((product) => (
                   <article key={product.id} className="product-card">

@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
+import EmptyState from "../components/EmptyState";
+import InlineError from "../components/InlineError";
+import ProductDetailSkeleton from "../components/ProductDetailSkeleton";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
 
@@ -9,58 +12,52 @@ export default function ProductDetail() {
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState("");
+  const [notFound, setNotFound] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
+  const navigate = useNavigate();
 
   const productCategory = categories.find((cat) => cat.slug === product?.category);
 
-  useEffect(() => {
-    let isActive = true;
+  const loadProduct = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setNotFound(false);
 
-    async function loadProduct() {
-      setLoading(true);
-      setError(null);
+    try {
+      const [productResponse, categoriesResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/products/${id}`),
+        fetch(`${API_BASE}/api/categories`)
+      ]);
 
-      try {
-        const [productResponse, categoriesResponse] = await Promise.all([
-          fetch(`${API_BASE}/api/products/${id}`),
-          fetch(`${API_BASE}/api/categories`)
-        ]);
+      const [productPayload, categoriesPayload] = await Promise.all([
+        productResponse.json(),
+        categoriesResponse.json()
+      ]);
 
-        const [productPayload, categoriesPayload] = await Promise.all([
-          productResponse.json(),
-          categoriesResponse.json()
-        ]);
-
-        if (!isActive) {
-          return;
-        }
-
-        if (!productResponse.ok) {
+      if (!productResponse.ok) {
+        if (productResponse.status === 404) {
+          setNotFound(true);
+          setProduct(null);
+        } else {
           throw new Error(productPayload?.error ?? "Product not found");
         }
-
+      } else if (productPayload?.product) {
         setProduct(productPayload.product);
         setCategories(categoriesPayload.categories ?? []);
-      } catch (err) {
-        if (isActive) {
-          setError(err.message);
-          setProduct(null);
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false);
-        }
       }
+    } catch (err) {
+      setError(err.message);
+      setProduct(null);
+    } finally {
+      setLoading(false);
     }
-
-    loadProduct();
-
-    return () => {
-      isActive = false;
-    };
   }, [id]);
+
+  useEffect(() => {
+    loadProduct();
+  }, [loadProduct]);
 
   useEffect(() => {
     setQuantity(1);
@@ -82,10 +79,22 @@ export default function ProductDetail() {
             ← Back to all products
           </Link>
 
-          {loading && <p className="status">Loading product details…</p>}
-          {error && !loading && <p className="status status-error">{error}</p>}
+          {loading && <ProductDetailSkeleton />}
 
-          {!loading && product && (
+          {!loading && error && (
+            <InlineError title="Unable to load product" body={error} onRetry={loadProduct} />
+          )}
+
+          {!loading && notFound && (
+            <EmptyState
+              title="Product not found"
+              body="The item may be unavailable or the link is incorrect."
+              actionLabel="Back to shop"
+              onAction={() => navigate("/")}
+            />
+          )}
+
+          {!loading && !error && !notFound && product && (
             <>
               <article className="detail-card">
                 <div className="detail-image">

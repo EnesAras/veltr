@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
 import { useAuth } from "../contexts/AuthContext";
+import EmptyState from "../components/EmptyState";
+import InlineError from "../components/InlineError";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
 
 export default function CheckoutPage() {
+  const navigate = useNavigate();
   const { items, subtotal } = useCart();
   const { token } = useAuth();
   const [rates, setRates] = useState([]);
@@ -81,8 +84,21 @@ export default function CheckoutPage() {
             <p className="lede">Fill out your contact, shipping, and payment details to complete the order.</p>
           </header>
 
-          <div className="checkout-layout">
-            <section className="checkout-hoja">
+          {items.length === 0 ? (
+            <EmptyState
+              title="Your cart is empty"
+              body="Add something before checking out."
+              actionLabel="Continue shopping"
+              onAction={() => navigate("/")}
+            />
+          ) : (
+            <>
+              {payError && (
+                <InlineError title="Checkout error" body={payError} onRetry={handlePay} />
+              )}
+
+              <div className="checkout-layout">
+                <section className="checkout-hoja">
               <div className="checkout-card">
                 <h2 className="checkout-card__title">Contact information</h2>
                 <form className="checkout-form">
@@ -170,11 +186,14 @@ export default function CheckoutPage() {
               <ul className="summary-items">
                 {items.map((item) => (
                   <li key={item.id}>
+                    <div className="summary-thumb" aria-hidden="true" />
                     <div className="summary-items__info">
-                      <span>{item.name}</span>
-                      <small>{item.qty} × ${item.price.toLocaleString()}</small>
+                      <span className="summary-items__name">{item.name}</span>
+                      <small>Qty {item.qty}</small>
                     </div>
-                    <span>${(item.qty * item.price).toLocaleString()}</span>
+                    <span className="summary-items__price">
+                      ${(item.qty * item.price).toLocaleString()}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -190,7 +209,6 @@ export default function CheckoutPage() {
                 <p>Total</p>
                 <p>${grandTotal.toFixed(2)}</p>
               </div>
-              {payError && <p className="status status-error">{payError}</p>}
               <button
                 type="button"
                 className="v-btn v-btn--primary checkout-cta"
@@ -204,6 +222,8 @@ export default function CheckoutPage() {
               </Link>
             </aside>
           </div>
+        </>
+      )}
         </div>
       </section>
     </main>

@@ -1,8 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../contexts/CartContext";
+import EmptyState from "../components/EmptyState";
+import InlineError from "../components/InlineError";
 
 export default function CartPage() {
-  const { items, subtotal, setQty, removeItem, totalItems } = useCart();
+  const navigate = useNavigate();
+  const { items, subtotal, setQty, removeItem, totalItems, loading, error, retryCart } = useCart();
 
   return (
     <main className="storefront-shell">
@@ -14,13 +17,39 @@ export default function CartPage() {
             <p className="lede">Review items and update quantities before checkout.</p>
           </header>
 
-          {items.length === 0 ? (
-            <section className="status">
-              <p>Your cart is empty.</p>
-              <Link to="/" className="nav-link">
-                Continue shopping
-              </Link>
-            </section>
+          {error && !loading && (
+            <InlineError title="Cart sync failed" body={error} onRetry={retryCart} />
+          )}
+
+          {loading ? (
+            <div className="cart-layout cart-layout--skeleton">
+              <section className="cart-items">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <article key={`skeleton-${index}`} className="cart-item cart-item--skeleton">
+                    <div className="cart-skeleton-thumb" />
+                    <div className="cart-skeleton-body">
+                      <div className="skeleton-line skeleton-line--title" />
+                      <div className="skeleton-line" />
+                    </div>
+                  </article>
+                ))}
+              </section>
+              <aside className="summary-card summary-card--skeleton">
+                <div className="skeleton-line skeleton-line--title" />
+                <div className="skeleton-line" />
+                <div className="skeleton-line skeleton-line--small" />
+                <div className="skeleton-line skeleton-line--button" />
+              </aside>
+            </div>
+          ) : !items.length ? (
+            <EmptyState
+              title="Your cart is empty"
+              body="Add something you love and come back to checkout."
+              actionLabel="Continue shopping"
+              onAction={() => navigate("/")}
+              secondaryLabel="Browse headphones"
+              secondaryOnClick={() => navigate("/")}
+            />
           ) : (
             <div className="cart-layout">
               <section className="cart-items">
