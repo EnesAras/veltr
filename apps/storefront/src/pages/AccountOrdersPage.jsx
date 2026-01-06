@@ -104,7 +104,12 @@ export default function AccountOrdersPage() {
             <ul className="order-items">
               {order.items.map((item) => (
                 <li key={`${order.id}-${item.productId}`} className="order-item">
-                  <span>{item.name}</span>
+                  <span>
+                    {item.name}
+                    {item.variantLabel && (
+                      <small className="order-item__variant">Finish: {item.variantLabel}</small>
+                    )}
+                  </span>
                   <span>
                     {item.qty} × ${item.price.toLocaleString()}
                   </span>

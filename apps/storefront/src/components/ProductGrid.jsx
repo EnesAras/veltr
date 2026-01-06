@@ -117,6 +117,16 @@ export default function ProductGrid({ initialCategory }) {
 
   const hasProducts = products.length > 0;
 
+  const getStockBadge = (stock) => {
+    if (stock <= 0) {
+      return { label: "Out of stock", variant: "out" };
+    }
+    if (stock <= 5) {
+      return { label: "Low stock", variant: "low" };
+    }
+    return null;
+  };
+
   return (
     <>
       <HeroScene />
@@ -244,29 +254,62 @@ export default function ProductGrid({ initialCategory }) {
               {!loading &&
                 !error &&
                 hasProducts &&
-                products.map((product) => (
-                  <article key={product.id} className="product-card">
-                    <Link to={`/product/${product.id}`} className="product-card__link">
-                      <div className="product-image">
-                        <img src={product.image} alt={product.name} loading="lazy" onError={handleTileImageError} />
+                products.map((product) => {
+                  const stock = product.stock ?? 0;
+                  const badge = getStockBadge(stock);
+                  const isOutOfStock = stock <= 0;
+                  const ratingValue = Number.isFinite(product.ratingAvg) ? product.ratingAvg : 0;
+                  const ratingCount = product.ratingCount ?? 0;
+                  const filledStars = Math.round(ratingValue);
+                  return (
+                    <article key={product.id} className="product-card">
+                      <Link to={`/product/${product.id}`} className="product-card__link">
+                        <div className="product-image">
+                          <img src={product.image} alt={product.name} loading="lazy" onError={handleTileImageError} />
+                          {badge && (
+                            <span className={`product-badge product-badge--${badge.variant}`}>{badge.label}</span>
+                          )}
+                        </div>
+                        <div className="product-info">
+                          <p className="product-name">{product.name}</p>
+                          {ratingCount > 0 && (
+                            <div
+                              className="product-rating"
+                              aria-label={`Rated ${ratingValue.toFixed(1)} out of 5 based on ${ratingCount} reviews`}
+                            >
+                              <div className="product-rating__stars">
+                                {Array.from({ length: 5 }).map((_, index) => (
+                                  <span
+                                    key={index}
+                                    className={`product-rating__star ${index < filledStars ? "is-filled" : ""}`}
+                                    aria-hidden="true"
+                                  >
+                                    ★
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="product-rating__meta">
+                                {ratingValue.toFixed(1)} ({ratingCount})
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                      <div className="product-card__footer">
+                        <p className="product-price">${product.price.toLocaleString()}</p>
+                        <button
+                          type="button"
+                          className="v-btn v-btn--primary product-card__action"
+                          disabled={isOutOfStock}
+                          onClick={() => !isOutOfStock && addItem(product, 1)}
+                          aria-label={isOutOfStock ? `${product.name} is out of stock` : `Add ${product.name} to cart`}
+                        >
+                          {isOutOfStock ? "Out of stock" : "Add to cart"}
+                        </button>
                       </div>
-                      <div className="product-info">
-                        <p className="product-name">{product.name}</p>
-                      </div>
-                    </Link>
-                    <div className="product-card__footer">
-                      <p className="product-price">${product.price.toLocaleString()}</p>
-                      <button
-                        type="button"
-                        className="v-btn v-btn--primary product-card__action"
-                        onClick={() => addItem(product, 1)}
-                        aria-label={`Add ${product.name} to cart`}
-                      >
-                        Add to cart
-                      </button>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
             </section>
 
             <div className="pagination">

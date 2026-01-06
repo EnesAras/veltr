@@ -59,9 +59,12 @@ export default function CartPage() {
                       <img src={item.image} alt={item.name} loading="lazy" />
                     </div>
                     <div className="cart-content">
-                      <Link to={`/product/${item.id}`} className="cart-product-name">
+                      <Link to={`/product/${item.productId}`} className="cart-product-name">
                         {item.name}
                       </Link>
+                      {item.variantLabel && (
+                        <span className="cart-product-variant">Finish: {item.variantLabel}</span>
+                      )}
                       <p className="cart-product-price">${item.price.toLocaleString()}</p>
                       <div className="qty-controls">
                         <button

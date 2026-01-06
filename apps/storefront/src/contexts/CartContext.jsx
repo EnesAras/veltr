@@ -188,26 +188,38 @@ export function CartProvider({ children }) {
     syncCartToServer(normalized);
   };
 
-  const addItem = (product, qty = 1) => {
+  const addItem = (product, qty = 1, options = {}) => {
     const productId = product?.id ?? product?.productId;
     if (!productId || qty <= 0) {
       return;
     }
+    if ((product?.stock ?? 1) <= 0) {
+      return;
+    }
+    const { variantId, variantLabel, variantHex, priceOverride } = options;
+    const entryId = variantId ? `${productId}:${variantId}` : productId;
+    const priceValue = priceOverride ?? product.price ?? 0;
     const next = [...items];
-    const existingIndex = next.findIndex((entry) => entry.productId === productId);
+    const existingIndex = next.findIndex((entry) => entry.id === entryId);
     if (existingIndex >= 0) {
       next[existingIndex] = {
         ...next[existingIndex],
-        qty: next[existingIndex].qty + qty
+        qty: next[existingIndex].qty + qty,
+        price: priceValue,
+        variantLabel,
+        variantHex
       };
     } else {
       next.push({
         productId,
+        id: entryId,
         name: product.name,
-        price: product.price,
+        price: priceValue,
         image: product.image,
         qty,
-        id: productId
+        variantId,
+        variantLabel,
+        variantHex
       });
     }
     updateCart(next);
