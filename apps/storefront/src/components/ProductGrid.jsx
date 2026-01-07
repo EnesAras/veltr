@@ -1,28 +1,27 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import HeroScene from "./HeroScene";
 import FeaturedCards from "./FeaturedCards";
 import { useCart } from "../contexts/CartContext";
-import SkeletonCard from "./SkeletonCard";
 import EmptyState from "./EmptyState";
-import InlineError from "./InlineError";
 import { SHOWCASE_TILES, FALLBACK_IMAGE } from "../../../../shared/data/products.js";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
+const FEATURE_ART_IMAGES = {
+  "veltr-aero-flagship": { src: "/images/feature/aero-flagship.png", position: "40% 50%", scale: 0.95 },
+  "veltr-echo-earbuds": { src: "/images/feature/echo-earbuds.png", position: "45% 45%", scale: 0.93 },
+  "veltr-arc-stand": { src: "/images/feature/pulse-gaming.png", position: "center", scale: 0.96 }
+};
+import { PRODUCTS } from "../data/products.js";
+
+const limit = 8;
 
 export default function ProductGrid({ initialCategory }) {
-  const [categories, setCategories] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [meta, setMeta] = useState({ page: 1, limit: 8, total: 0, pages: 1 });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState(initialCategory ?? "");
   const [sort, setSort] = useState("newest");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 8;
   const navigate = useNavigate();
   const { addItem } = useCart();
 
@@ -35,55 +34,55 @@ export default function ProductGrid({ initialCategory }) {
     setPage(1);
   }, [search, sort, minPrice, maxPrice]);
 
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const response = await fetch(`${API_BASE}/api/categories`);
-        const payload = await response.json();
-        if (!response.ok) {
-          throw new Error(payload?.error ?? "Unable to load categories");
-        }
-        setCategories(payload.categories ?? []);
-      } catch (err) {
-        setCategories([]);
+  const filteredProducts = useMemo(() => {
+    let list = PRODUCTS;
+    if (search) {
+      const query = search.toLowerCase();
+      list = list.filter(
+        (item) => item.name.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+      );
+    }
+    if (category) {
+      list = list.filter((item) => item.category === category);
+    }
+    if (minPrice) {
+      const min = Number(minPrice);
+      if (!Number.isNaN(min)) {
+        list = list.filter((item) => item.price >= min);
       }
     }
-
-    loadCategories();
-  }, []);
-
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set("q", search);
-      if (category) params.set("category", category);
-      if (minPrice) params.set("minPrice", minPrice);
-      if (maxPrice) params.set("maxPrice", maxPrice);
-      if (sort) params.set("sort", sort);
-      params.set("page", String(page));
-      params.set("limit", String(limit));
-
-      const response = await fetch(`${API_BASE}/api/products?${params.toString()}`);
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload?.error ?? "Unable to load products");
+    if (maxPrice) {
+      const max = Number(maxPrice);
+      if (!Number.isNaN(max)) {
+        list = list.filter((item) => item.price <= max);
       }
-
-      setProducts(payload.items ?? []);
-      setMeta(payload.meta ?? { page, limit, total: 0, pages: 1 });
-    } catch (err) {
-      setProducts([]);
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
-  }, [search, category, sort, minPrice, maxPrice, page]);
+    if (sort === "price_asc") {
+      list = [...list].sort((a, b) => a.price - b.price);
+    } else if (sort === "price_desc") {
+      list = [...list].sort((a, b) => b.price - a.price);
+    }
+    return list;
+  }, [search, category, minPrice, maxPrice, sort]);
+
+  const categories = useMemo(() => Array.from(new Set(PRODUCTS.map((product) => product.category))), []);
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / limit));
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const currentMeta = {
+    page,
+    limit,
+    total: filteredProducts.length,
+    pages: totalPages
+  };
+
+  const visibleProducts = filteredProducts.slice((page - 1) * limit, page * limit);
+  const hasProducts = visibleProducts.length > 0;
 
   function handleCategoryLink(slug) {
     if (slug) {
@@ -94,10 +93,10 @@ export default function ProductGrid({ initialCategory }) {
   }
 
   function handlePageChange(delta) {
-    setPage((value) => Math.max(1, value + delta));
+    setPage((value) => Math.max(1, Math.min(value + delta, totalPages)));
   }
 
-  const clearFilters = () => {
+  function clearFilters() {
     setSearch("");
     setMinPrice("");
     setMaxPrice("");
@@ -105,7 +104,7 @@ export default function ProductGrid({ initialCategory }) {
     setCategory("");
     setPage(1);
     navigate("/");
-  };
+  }
 
   const handleTileImageError = (event) => {
     const target = event.currentTarget;
@@ -114,8 +113,6 @@ export default function ProductGrid({ initialCategory }) {
       target.src = FALLBACK_IMAGE;
     }
   };
-
-  const hasProducts = products.length > 0;
 
   const getStockBadge = (stock) => {
     if (stock <= 0) {
@@ -136,26 +133,41 @@ export default function ProductGrid({ initialCategory }) {
         <section className="v-section v-section--tight">
           <div className="v-container">
             <section className="audio-showcase" aria-label="VELTR audio highlights">
-              {SHOWCASE_TILES.map((tile) => (
-                <article key={tile.id} className="audio-showcase__tile">
-                  <div className="audio-showcase__content">
-                    <p className="audio-showcase__eyebrow">{tile.accent}</p>
-                    <h2>{tile.title}</h2>
-                    <p>{tile.tagline}</p>
-                    <div className="audio-showcase__actions">
-                      <Link to={`/product/${tile.id}`} className="audio-showcase__btn audio-showcase__btn--primary">
-                        View product
-                      </Link>
-                      <button type="button" className="audio-showcase__btn audio-showcase__btn--secondary">
-                        Buy
-                      </button>
+              {SHOWCASE_TILES.map((tile) => {
+                const featured = FEATURE_ART_IMAGES[tile.id];
+                const imageSrc = featured?.src ?? tile.image;
+                return (
+                  <article key={tile.id} className="audio-showcase__tile">
+                    <div className="audio-showcase__content">
+                      <p className="audio-showcase__eyebrow">{tile.accent}</p>
+                      <h2>{tile.title}</h2>
+                      <p>{tile.tagline}</p>
+                      <div className="audio-showcase__actions">
+                        <Link to={`/product/${tile.id}`} className="audio-showcase__btn audio-showcase__btn--primary">
+                          View product
+                        </Link>
+                        <button type="button" className="audio-showcase__btn audio-showcase__btn--secondary">
+                          Buy
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="audio-showcase__media">
-                    <img src={tile.image} alt={tile.title} loading="lazy" onError={handleTileImageError} />
-                  </div>
-                </article>
-              ))}
+                    <div className="audio-showcase__media">
+                      <div className="audio-showcase__media-inner">
+                        <img
+                          src={imageSrc}
+                          alt={tile.title}
+                          loading="lazy"
+                          onError={handleTileImageError}
+                          style={{
+                            objectPosition: featured?.position ?? "center",
+                            "--tile-scale": featured?.scale ?? 1
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </section>
           </div>
         </section>
@@ -180,12 +192,12 @@ export default function ProductGrid({ initialCategory }) {
               </button>
               {categories.map((cat) => (
                 <button
-                  key={cat.slug}
+                  key={cat}
                   type="button"
-                  className={category === cat.slug ? "active" : ""}
-                  onClick={() => handleCategoryLink(cat.slug)}
+                  className={category === cat ? "active" : ""}
+                  onClick={() => handleCategoryLink(cat)}
                 >
-                  {cat.name}
+                  {cat}
                 </button>
               ))}
             </section>
@@ -231,16 +243,7 @@ export default function ProductGrid({ initialCategory }) {
             </section>
 
             <section className="products-grid">
-              {loading &&
-                Array.from({ length: limit }).map((_, index) => (
-                  <SkeletonCard key={`skeleton-${index}`} />
-                ))}
-
-              {!loading && error && (
-                <InlineError title="Unable to load products" body={error} onRetry={fetchProducts} />
-              )}
-
-              {!loading && !error && !hasProducts && (
+              {!hasProducts && (
                 <EmptyState
                   title="No products found"
                   body="Try tweaking your filters or search to discover the perfect gear."
@@ -251,19 +254,18 @@ export default function ProductGrid({ initialCategory }) {
                 />
               )}
 
-              {!loading &&
-                !error &&
-                hasProducts &&
-                products.map((product) => {
-                  const stock = product.stock ?? 0;
+          {hasProducts &&
+            visibleProducts.map((product) => {
+              console.log("PRODUCT_IMAGE", product.slug, product.image);
+                  const stock = product.inStock ?? 0;
                   const badge = getStockBadge(stock);
                   const isOutOfStock = stock <= 0;
-                  const ratingValue = Number.isFinite(product.ratingAvg) ? product.ratingAvg : 0;
-                  const ratingCount = product.ratingCount ?? 0;
+                  const ratingValue = Number.isFinite(product.rating) ? product.rating : 0;
+                  const ratingCount = product.reviewsCount ?? 0;
                   const filledStars = Math.round(ratingValue);
                   return (
                     <article key={product.id} className="product-card">
-                      <Link to={`/product/${product.id}`} className="product-card__link">
+                      <Link to={`/product/${product.slug}`} className="product-card__link">
                         <div className="product-image">
                           <img src={product.image} alt={product.name} loading="lazy" onError={handleTileImageError} />
                           {badge && (
@@ -296,7 +298,7 @@ export default function ProductGrid({ initialCategory }) {
                         </div>
                       </Link>
                       <div className="product-card__footer">
-                        <p className="product-price">${product.price.toLocaleString()}</p>
+                        <p className="product-price">{product.currency} {product.price.toLocaleString()}</p>
                         <button
                           type="button"
                           className="v-btn v-btn--primary product-card__action"
@@ -315,14 +317,14 @@ export default function ProductGrid({ initialCategory }) {
             <div className="pagination">
               <div className="pagination-meta">
                 <p>
-                  Page {meta.page} of {meta.pages} ({meta.total} items)
+                  Page {currentMeta.page} of {currentMeta.pages} ({currentMeta.total} items)
                 </p>
               </div>
               <div className="pagination-actions">
                 <button type="button" onClick={() => handlePageChange(-1)} disabled={page <= 1}>
                   Prev
                 </button>
-                <button type="button" onClick={() => handlePageChange(1)} disabled={page >= meta.pages}>
+                <button type="button" onClick={() => handlePageChange(1)} disabled={page >= currentMeta.pages}>
                   Next
                 </button>
               </div>

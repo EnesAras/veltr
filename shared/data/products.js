@@ -31,21 +31,21 @@ const SHOWCASE_TILES = [
     title: "VELTR Aero Flagship",
     accent: "Flagship over-ear studio",
     tagline: "Carbon fiber headband, dual X drivers, and 40-hour battery for cinematic listening, anytime.",
-    image: "/assets/veltr/tile-01.jpg"
+    image: "/images/feature/aero-flagship.jpg"
   },
   {
     id: "veltr-echo-earbuds",
     title: "VELTR Echo Wireless Earbuds",
     accent: "True wireless Earbuds",
     tagline: "Spatial audio, adaptive EQ, and a sculpted titanium stem that disappears in the ear.",
-    image: "/assets/veltr/tile-02.jpg"
+    image: "/images/feature/echo-earbuds.jpg"
   },
   {
     id: "veltr-arc-stand",
     title: "VELTR Arc Charging Stand",
     accent: "Accessories / charging",
     tagline: "Magnetic cradle and balanced stand that doubles as a lighting sculpted display for your set.",
-    image: "/assets/veltr/tile-03.jpg"
+    image: "/images/feature/pulse-gaming.jpg"
   }
 ];
 
