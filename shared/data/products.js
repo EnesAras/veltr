@@ -1,21 +1,27 @@
 const HERO_IMAGES = [
   {
-    id: "veltr-hero-01",
-    title: "Veltr Aero Flagship",
-    image: "/assets/veltr/hero-01.jpg",
-    description: "Over-ear flagship with carbon mesh drivers and sculpted headband."
+    id: "hero-01",
+    title: "Veltr Horizon",
+    image: "/images/hero/hero-01.jpg",
+    description: "Veltr Horizon – premium over-ear experience."
   },
   {
-    id: "veltr-hero-02",
-    title: "Veltr Echo Earbuds",
-    image: "/assets/veltr/hero-02.jpg",
-    description: "True wireless buds with adaptive EQ and spatial audio."
+    id: "hero-02",
+    title: "Veltr Echo",
+    image: "/images/hero/hero-02.jpg",
+    description: "Veltr Echo – sculpted earbuds for daily rituals."
   },
   {
-    id: "veltr-hero-03",
-    title: "Veltr Nova Studio",
-    image: "/assets/veltr/hero-03.jpg",
-    description: "Studio-caliber ANC headphones built for mixing and cinematic listening."
+    id: "hero-03",
+    title: "Veltr Pulse",
+    image: "/images/hero/hero-03.jpg",
+    description: "Veltr Pulse – studio-ready headset."
+  },
+  {
+    id: "hero-04",
+    title: "Veltr Lumen",
+    image: "/images/hero/hero-04.jpg",
+    description: "Veltr Lumen – wireless case + dock."
   }
 ];
 
@@ -412,59 +418,59 @@ const FALLBACK_IMAGE = HERO_IMAGES[0]?.image ?? "/assets/veltr/hero-01.jpg";
 const FEATURED_CARDS = [
   {
     id: "veltr-editorial-1",
-    title: "Veltr Aero Flagship story",
-    tag: "HEADPHONES",
-    description: "Crafted aluminum, carbon mesh and soft memory foam make the Aero Flagship an icon of clarity.",
-    image: "/assets/veltr/hero-01.jpg",
-    link: "/product/veltr-aero-flagship"
-  },
-  {
-    id: "veltr-editorial-2",
-    title: "Veltr Echo in the wild",
+    title: "Echo in the wild",
     tag: "EARBUDS",
     description: "Tiny buds, spacious sound; the Echo pack adaptive noise into a whisper-light form factor.",
-    image: "/assets/veltr/hero-02.jpg",
+    image: "/assets/veltr/editorial/urban.jpg",
     link: "/product/veltr-echo-earbuds"
   },
   {
-    id: "veltr-editorial-3",
+    id: "veltr-editorial-2",
     title: "Veltr Studio rituals",
     tag: "STUDIO",
     description: "Nova Studio is tuned for mixing and cinematic listening with adaptive pressure and hi-res DAC.",
-    image: "/assets/veltr/hero-03.jpg",
+    image: "/assets/veltr/editorial/studio.jpg",
     link: "/category/studio"
   },
   {
-    id: "veltr-editorial-4",
+    id: "veltr-editorial-3",
     title: "Veltr Pulse gaming diary",
     tag: "GAMING",
     description: "Surround-drive clarity and ambient awareness for long sessions and late-night competitions.",
-    image: "/assets/veltr/grid-04.jpg",
+    image: "/assets/veltr/editorial/gaming.jpg",
     link: "/product/veltr-pulse-gaming"
   },
   {
+    id: "veltr-editorial-4",
+    title: "Veltr on the move",
+    tag: "TRAVEL",
+    description: "Lightweight comfort and long-life battery keep playlists flowing through every transit day.",
+    image: "/assets/veltr/editorial/travel.jpg",
+    link: "/category/over-ear"
+  },
+  {
     id: "veltr-editorial-5",
-    title: "Veltr Meridian monitoring",
+    title: "Deep focus",
     tag: "STUDIO",
-    description: "Signal Bass Monitor brings reference detail and tactile warmth to every mix and master.",
-    image: "/assets/veltr/grid-07.jpg",
+    description: "Noise-blocking clarity and warm resonance make every detail in your mix stand out.",
+    image: "/assets/veltr/editorial/focus.jpg",
     link: "/product/veltr-signal-bass"
   },
   {
     id: "veltr-editorial-6",
-    title: "Veltr Arc ritual",
-    tag: "ACCESSORIES",
-    description: "Magnetic charging stand keeps your veltr collection on display and ready with a single lift.",
-    image: "/assets/veltr/grid-06.jpg",
-    link: "/product/veltr-arc-stand"
+    title: "Workout flow",
+    tag: "ACTIVE",
+    description: "Sweat-resistant, secure fit stays locked until the last rep drops.",
+    image: "/assets/veltr/editorial/workout.jpg",
+    link: "/category/gaming"
   },
   {
     id: "veltr-editorial-7",
-    title: "Veltr Lumen travel capsule",
-    tag: "ACCESSORIES",
-    description: "Aluminum case with integral USB-C power keep earbuds and buds together anywhere.",
-    image: "/assets/veltr/grid-08.jpg",
-    link: "/product/veltr-lumen-case"
+    title: "Evening chill",
+    tag: "RELAX",
+    description: "Warm, ambient soundscapes for slow evenings and refined relaxation.",
+    image: "/assets/veltr/editorial/chill.jpg",
+    link: "/product/veltr-aero-flagship"
   }
 ];
 

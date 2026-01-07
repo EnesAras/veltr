@@ -12,7 +12,7 @@ import RegisterPage from "./pages/RegisterPage";
 import AccountPage from "./pages/AccountPage";
 import AccountOrdersPage from "./pages/AccountOrdersPage";
 import SiteHeader from "./components/SiteHeader";
-import SiteFooter from "./components/SiteFooter";
+import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
@@ -62,7 +62,7 @@ export default function App() {
               }
             />
           </Routes>
-          <SiteFooter />
+          <Footer />
         </BrowserRouter>
       </CartProvider>
     </AuthProvider>
