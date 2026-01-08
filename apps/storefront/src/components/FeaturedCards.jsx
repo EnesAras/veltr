@@ -40,7 +40,6 @@ export default function FeaturedCards() {
                       alt={card.title}
                       loading={index < PRELOAD_COUNT ? "eager" : "lazy"}
                       decoding="async"
-                      fetchPriority={index < PRELOAD_COUNT ? "high" : "low"}
                       width="600"
                       height="600"
                     />

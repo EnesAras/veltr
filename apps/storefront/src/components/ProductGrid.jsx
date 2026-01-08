@@ -5,12 +5,6 @@ import FeaturedCards from "./FeaturedCards";
 import { useCart } from "../contexts/CartContext";
 import EmptyState from "./EmptyState";
 import { SHOWCASE_TILES, FALLBACK_IMAGE } from "../../../../shared/data/products.js";
-
-const FEATURE_ART_IMAGES = {
-  "veltr-aero-flagship": { src: "/images/feature/aero-flagship.png", position: "40% 50%", scale: 0.95 },
-  "veltr-echo-earbuds": { src: "/images/feature/echo-earbuds.png", position: "45% 45%", scale: 0.93 },
-  "veltr-arc-stand": { src: "/images/feature/pulse-gaming.png", position: "center", scale: 0.96 }
-};
 import { PRODUCTS } from "../data/products.js";
 
 const limit = 8;
@@ -133,41 +127,37 @@ export default function ProductGrid({ initialCategory }) {
         <section className="v-section v-section--tight">
           <div className="v-container">
             <section className="audio-showcase" aria-label="VELTR audio highlights">
-              {SHOWCASE_TILES.map((tile) => {
-                const featured = FEATURE_ART_IMAGES[tile.id];
-                const imageSrc = featured?.src ?? tile.image;
-                return (
-                  <article key={tile.id} className="audio-showcase__tile">
-                    <div className="audio-showcase__content">
-                      <p className="audio-showcase__eyebrow">{tile.accent}</p>
-                      <h2>{tile.title}</h2>
-                      <p>{tile.tagline}</p>
-                      <div className="audio-showcase__actions">
-                        <Link to={`/product/${tile.id}`} className="audio-showcase__btn audio-showcase__btn--primary">
-                          View product
-                        </Link>
-                        <button type="button" className="audio-showcase__btn audio-showcase__btn--secondary">
-                          Buy
-                        </button>
-                      </div>
+              {SHOWCASE_TILES.map((tile) => (
+                <article key={tile.id} className="audio-showcase__tile">
+                  <div className="audio-showcase__content">
+                    <p className="audio-showcase__eyebrow">{tile.accent}</p>
+                    <h2>{tile.title}</h2>
+                    <p>{tile.tagline}</p>
+                    <div className="audio-showcase__actions">
+                      <Link to={`/product/${tile.id}`} className="audio-showcase__btn audio-showcase__btn--primary">
+                        View product
+                      </Link>
+                      <button type="button" className="audio-showcase__btn audio-showcase__btn--secondary">
+                        Buy
+                      </button>
                     </div>
-                    <div className="audio-showcase__media">
-                      <div className="audio-showcase__media-inner">
-                        <img
-                          src={imageSrc}
-                          alt={tile.title}
-                          loading="lazy"
-                          onError={handleTileImageError}
-                          style={{
-                            objectPosition: featured?.position ?? "center",
-                            "--tile-scale": featured?.scale ?? 1
-                          }}
-                        />
-                      </div>
+                  </div>
+                  <div className="audio-showcase__media">
+                    <div className="audio-showcase__media-inner">
+                      <img
+                        src={tile.image}
+                        alt={tile.title}
+                        loading="lazy"
+                        onError={handleTileImageError}
+                        style={{
+                          objectPosition: tile.imagePosition ?? "center",
+                          "--tile-scale": tile.imageScale ?? 1
+                        }}
+                      />
                     </div>
-                  </article>
-                );
-              })}
+                  </div>
+                </article>
+              ))}
             </section>
           </div>
         </section>

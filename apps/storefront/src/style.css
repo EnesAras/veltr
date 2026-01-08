@@ -1,3 +1,8 @@
+html {
+  overscroll-behavior-x: none;
+  overflow-x: hidden;
+}
+
 :root {
   font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
@@ -44,6 +49,7 @@ body {
   min-height: 100vh;
   line-height: 1.6;
   letter-spacing: -0.01em;
+  overscroll-behavior-x: none;
 }
 
 a {
@@ -499,7 +505,16 @@ a {
   background: #020204;
   color: #fff;
   touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   isolation: isolate;
+  cursor: grab;
+  pointer-events: auto;
+}
+
+.hero-apple.is-dragging {
+  cursor: grabbing;
 }
 
 .hero-apple--empty {
@@ -523,6 +538,8 @@ a {
   transform: translate3d(0, 0, 0);
   transition: transform 0.58s ease;
   will-change: transform;
+  touch-action: pan-y;
+  pointer-events: auto;
 }
 
 .hero-apple__slide {
@@ -539,6 +556,7 @@ a {
   object-position: center;
   display: block;
   transition: opacity 0.45s ease;
+  pointer-events: none;
 }
 
 .hero-apple__content {
@@ -550,6 +568,10 @@ a {
   justify-content: center;
   max-width: clamp(320px, 36vw, 520px);
   pointer-events: none;
+}
+
+.hero-apple__content .v-btn {
+  pointer-events: auto;
 }
 
 .hero-apple__content::before {
@@ -648,6 +670,20 @@ a {
 .hero-apple__dot.is-active {
   background: rgba(255, 255, 255, 0.9);
   border-color: transparent;
+}
+
+.hero-apple__debug {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  z-index: 8;
+  pointer-events: none;
 }
 
 .veltr-footer {

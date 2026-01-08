@@ -3,7 +3,8 @@ import { HERO_IMAGES } from "../../../../shared/data/products.js";
 
 const AUTOPLAY_DELAY = 7500;
 const TRANSITION_DURATION = 520;
-const SWIPE_THRESHOLD = 40;
+const MIN_SWIPE_THRESHOLD = 55;
+const SWIPE_THRESHOLD_FACTOR = 0.06;
 
 function normalizeSlides() {
   return HERO_IMAGES.map((slide, index) => ({
@@ -26,13 +27,33 @@ export default function HeroCarouselApple() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const pointerRef = useRef({ startX: 0, delta: 0, active: false, pointerId: null });
+  const activeIndexRef = useRef(activeIndex);
+  const pointerRef = useRef({
+    startX: 0,
+    startY: 0,
+    delta: 0,
+    active: false,
+    pointerId: null,
+    hasNavigated: false
+  });
   const pauseTimerRef = useRef(null);
   const transitionTimerRef = useRef(null);
+  const gestureTimeoutRef = useRef(null);
+  const gestureLockRef = useRef(false);
   const trackRef = useRef(null);
+  const heroRef = useRef(null);
   const mountedRef = useRef(true);
   const loadedMapRef = useRef({});
   const loadingPromiseRef = useRef({});
+  const [debugState, setDebugState] = useState({
+    pointerDowns: 0,
+    pointerMoves: 0,
+    lastDx: 0,
+    dragging: false,
+    navigated: false,
+    targetTag: "",
+    targetClass: ""
+  });
 
   useEffect(() => {
     return () => {
@@ -40,9 +61,12 @@ export default function HeroCarouselApple() {
       if (pauseTimerRef.current) {
         clearTimeout(pauseTimerRef.current);
       }
-      if (transitionTimerRef.current) {
-        clearTimeout(transitionTimerRef.current);
-      }
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+    }
+    if (gestureTimeoutRef.current) {
+      clearTimeout(gestureTimeoutRef.current);
+    }
     };
   }, []);
 
@@ -115,6 +139,10 @@ export default function HeroCarouselApple() {
     ensureSlideReady(next);
     ensureSlideReady(prev);
   }, [activeIndex, ensureSlideReady, hasSlides, slides.length]);
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
   const pauseAutoplay = useCallback(() => {
     if (pauseTimerRef.current) {
@@ -191,73 +219,142 @@ export default function HeroCarouselApple() {
     };
   }, [activeIndex, isPlaying, navigateTo, slides.length]);
 
-  const calculateThreshold = useCallback(() => {
-    if (typeof window === "undefined") {
-      return 60;
+  const releaseGestureLock = useCallback(() => {
+    if (gestureTimeoutRef.current) {
+      clearTimeout(gestureTimeoutRef.current);
+      gestureTimeoutRef.current = null;
     }
-    const width = trackRef.current?.offsetWidth ?? window.innerWidth ?? 1024;
-    return Math.max(60, width * 0.08);
+    gestureLockRef.current = false;
   }, []);
 
-  const finishDrag = useCallback(
-    (shouldNavigate) => {
-      if (!pointerRef.current.active) {
+  const engageGestureLock = useCallback(
+    (duration = 400) => {
+      if (gestureTimeoutRef.current) {
+        clearTimeout(gestureTimeoutRef.current);
+      }
+      gestureLockRef.current = true;
+      if (typeof window === "undefined") {
         return;
       }
-      const { delta, pointerId } = pointerRef.current;
-      pointerRef.current.active = false;
-      pointerRef.current.delta = 0;
-      pointerRef.current.pointerId = null;
-      setIsDragging(false);
-      trackRef.current?.releasePointerCapture?.(pointerId);
-      if (!shouldNavigate) {
-        return;
-      }
-      const threshold = calculateThreshold();
-      if (Math.abs(delta) > threshold) {
-        const direction = delta < 0 ? 1 : -1;
-        navigateTo(activeIndex + direction, true);
-      }
+      gestureTimeoutRef.current = window.setTimeout(() => {
+        gestureLockRef.current = false;
+        gestureTimeoutRef.current = null;
+      }, duration);
     },
-    [activeIndex, calculateThreshold, navigateTo]
+    []
   );
 
-  const handlePointerDown = (event) => {
-    if (event.pointerType === "mouse" && event.button !== 0) {
+  const finishDrag = useCallback(() => {
+    if (!pointerRef.current.active) {
       return;
     }
-    pauseAutoplay();
-    pointerRef.current = {
-      startX: event.clientX,
-      delta: 0,
-      active: true,
-      pointerId: event.pointerId
-    };
-    setIsDragging(true);
-    trackRef.current?.setPointerCapture?.(event.pointerId);
-  };
+    const { pointerId } = pointerRef.current;
+    pointerRef.current.active = false;
+    pointerRef.current.delta = 0;
+    pointerRef.current.pointerId = null;
+    pointerRef.current.hasNavigated = false;
+    setIsDragging(false);
+    heroRef.current?.releasePointerCapture?.(pointerId);
+    releaseGestureLock();
+    setDebugState((prev) => ({ ...prev, dragging: false }));
+  }, [releaseGestureLock]);
 
-  const handlePointerMove = (event) => {
-    if (!pointerRef.current.active || pointerRef.current.pointerId !== event.pointerId) {
-      return;
-    }
-    event.preventDefault();
-    pointerRef.current.delta = event.clientX - pointerRef.current.startX;
-  };
+  const handlePointerDown = useCallback(
+    (event) => {
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+      if (event.target instanceof Element && (event.target.closest("button") || event.target.closest("a"))) {
+        return;
+      }
+      if (!event.defaultPrevented) {
+        event.preventDefault();
+      }
+      pauseAutoplay();
+      pointerRef.current.startX = event.clientX;
+      pointerRef.current.startY = event.clientY;
+      pointerRef.current.delta = 0;
+      pointerRef.current.active = true;
+      pointerRef.current.pointerId = event.pointerId;
+      pointerRef.current.hasNavigated = false;
+      setIsDragging(true);
+      heroRef.current?.setPointerCapture?.(event.pointerId);
+      releaseGestureLock();
+      const target = event.target;
+      setDebugState((prev) => ({
+        ...prev,
+        pointerDowns: prev.pointerDowns + 1,
+        dragging: true,
+        navigated: false,
+        targetTag: target?.tagName ?? "",
+        targetClass: target?.className ?? ""
+      }));
+    },
+    [pauseAutoplay, releaseGestureLock]
+  );
 
-  const handlePointerUp = (event) => {
-    if (pointerRef.current.pointerId !== event.pointerId) {
-      return;
+  const getSwipeThreshold = useCallback(() => {
+    if (typeof window === "undefined") {
+      return MIN_SWIPE_THRESHOLD;
     }
-    finishDrag(true);
-  };
+    const width = trackRef.current?.offsetWidth ?? window.innerWidth ?? 1024;
+    return Math.max(MIN_SWIPE_THRESHOLD, width * SWIPE_THRESHOLD_FACTOR);
+  }, []);
 
-  const handlePointerCancel = (event) => {
-    if (pointerRef.current.pointerId !== event.pointerId) {
-      return;
-    }
-    finishDrag(false);
-  };
+  const handlePointerMove = useCallback(
+    (event) => {
+      if (!pointerRef.current.active || pointerRef.current.pointerId !== event.pointerId) {
+        return;
+      }
+      const deltaX = event.clientX - pointerRef.current.startX;
+      const deltaY = event.clientY - pointerRef.current.startY;
+      if (Math.abs(deltaX) <= Math.abs(deltaY)) {
+        return;
+      }
+      if (!event.defaultPrevented) {
+        event.preventDefault();
+      }
+      pointerRef.current.delta = deltaX;
+      setDebugState((prev) => ({
+        ...prev,
+        pointerMoves: prev.pointerMoves + 1,
+        lastDx: deltaX
+      }));
+      if (pointerRef.current.hasNavigated) {
+        return;
+      }
+      const threshold = getSwipeThreshold();
+      if (Math.abs(deltaX) >= threshold) {
+        pointerRef.current.hasNavigated = true;
+        const direction = deltaX < 0 ? 1 : -1;
+        engageGestureLock();
+        navigateTo(activeIndexRef.current + direction, true);
+        finishDrag();
+        setDebugState((prev) => ({ ...prev, navigated: true }));
+      }
+    },
+    [engageGestureLock, finishDrag, navigateTo]
+  );
+
+  const handlePointerUp = useCallback(
+    (event) => {
+      if (pointerRef.current.pointerId !== event.pointerId) {
+        return;
+      }
+      finishDrag();
+    },
+    [finishDrag]
+  );
+
+  const handlePointerCancel = useCallback(
+    (event) => {
+      if (pointerRef.current.pointerId !== event.pointerId) {
+        return;
+      }
+      finishDrag();
+    },
+    [finishDrag]
+  );
 
   if (!hasSlides) {
     return (
@@ -268,25 +365,35 @@ export default function HeroCarouselApple() {
   }
 
   return (
-    <section
-      className="hero-apple"
-      style={{
-        cursor: isDragging ? "grabbing" : "grab",
-        userSelect: "none"
-      }}
-    >
+        <section
+          className={`hero-apple${isDragging ? " is-dragging" : ""}`}
+          ref={heroRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
+        >
+          <div className="hero-apple__debug">
+            ↓ {debugState.pointerDowns} • move {debugState.pointerMoves} • dx {Math.round(debugState.lastDx)}
+            • dragging {debugState.dragging ? "yes" : "no"} • navigated {debugState.navigated ? "yes" : "no"}
+            <br />
+            target: {debugState.targetTag || "—"} {debugState.targetClass ? `(${debugState.targetClass})` : ""}
+          </div>
       <div
         className="hero-apple__track"
         style={{ transform: `translate3d(-${activeIndex * 100}%, 0, 0)` }}
         ref={trackRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerCancel}
       >
         {slides.map((slide) => (
           <article className="hero-apple__slide" key={slide.id} aria-label={slide.title}>
-            <img src={slide.mediaSrc} alt={slide.title} className="hero-apple__image" loading="eager" decoding="async" />
+            <img
+              src={slide.mediaSrc}
+              alt={slide.title}
+              className="hero-apple__image"
+              loading="eager"
+              decoding="async"
+              draggable="false"
+            />
             <div className="hero-apple__content">
               <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
               <h1>{slide.title}</h1>

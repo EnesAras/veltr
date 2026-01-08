@@ -29,23 +29,29 @@ const SHOWCASE_TILES = [
   {
     id: "veltr-aero-flagship",
     title: "VELTR Aero Flagship",
-    accent: "Flagship over-ear studio",
-    tagline: "Carbon fiber headband, dual X drivers, and 40-hour battery for cinematic listening, anytime.",
-    image: "/images/feature/aero-flagship.jpg"
+    accent: "Flagship over-ear",
+    tagline: "Dual carbon mesh drivers, adaptive ANC, and 40-hour battery for immersive listening.",
+    image: "/images/feature/aero-flagship.png",
+    imagePosition: "40% 50%",
+    imageScale: 0.95
   },
   {
     id: "veltr-echo-earbuds",
     title: "VELTR Echo Wireless Earbuds",
-    accent: "True wireless Earbuds",
-    tagline: "Spatial audio, adaptive EQ, and a sculpted titanium stem that disappears in the ear.",
-    image: "/images/feature/echo-earbuds.jpg"
+    accent: "True wireless + case",
+    tagline: "Adaptive transparency, spatial audio, and titanium stems that disappear in the ear canal.",
+    image: "/images/feature/echo-earbuds.png",
+    imagePosition: "45% 45%",
+    imageScale: 0.93
   },
   {
     id: "veltr-arc-stand",
-    title: "VELTR Arc Charging Stand",
-    accent: "Accessories / charging",
-    tagline: "Magnetic cradle and balanced stand that doubles as a lighting sculpted display for your set.",
-    image: "/images/feature/pulse-gaming.jpg"
+    title: "VELTR Pulse Gaming",
+    accent: "Gaming RGB headset",
+    tagline: "Adaptive surround, programmable lighting, and breathable memory foam for late-night raids.",
+    image: "/images/feature/pulse-gaming.png",
+    imagePosition: "center",
+    imageScale: 0.96
   }
 ];
 
