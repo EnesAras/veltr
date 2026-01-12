@@ -3,25 +3,29 @@ const HERO_IMAGES = [
     id: "hero-01",
     title: "Veltr Horizon",
     image: "/images/hero/hero-01.jpg",
-    description: "Veltr Horizon – premium over-ear experience."
+    description: "Veltr Horizon – premium over-ear experience.",
+    textTheme: "light"
   },
   {
     id: "hero-02",
     title: "Veltr Echo",
     image: "/images/hero/hero-02.jpg",
-    description: "Veltr Echo – sculpted earbuds for daily rituals."
+    description: "Veltr Echo – sculpted earbuds for daily rituals.",
+    textTheme: "light"
   },
   {
     id: "hero-03",
     title: "Veltr Pulse",
     image: "/images/hero/hero-03.jpg",
-    description: "Veltr Pulse – studio-ready headset."
+    description: "Veltr Pulse – studio-ready headset.",
+    textTheme: "light"
   },
   {
     id: "hero-04",
     title: "Veltr Lumen",
     image: "/images/hero/hero-04.jpg",
-    description: "Veltr Lumen – wireless case + dock."
+    description: "Veltr Lumen – wireless case + dock.",
+    textTheme: "light"
   }
 ];
 

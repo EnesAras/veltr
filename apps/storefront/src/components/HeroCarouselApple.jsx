@@ -16,7 +16,8 @@ function normalizeSlides() {
       slide.subtitle ??
       slide.description ??
       "Acoustic architecture tuned for every nuance, with carbon mesh drivers breathing detail into every note.",
-    cta: slide.cta ?? "Discover"
+    cta: slide.cta ?? "Discover",
+    textTheme: slide.textTheme ?? "light"
   }));
 }
 
@@ -45,15 +46,6 @@ export default function HeroCarouselApple() {
   const mountedRef = useRef(true);
   const loadedMapRef = useRef({});
   const loadingPromiseRef = useRef({});
-  const [debugState, setDebugState] = useState({
-    pointerDowns: 0,
-    pointerMoves: 0,
-    lastDx: 0,
-    dragging: false,
-    navigated: false,
-    targetTag: "",
-    targetClass: ""
-  });
 
   useEffect(() => {
     return () => {
@@ -61,12 +53,12 @@ export default function HeroCarouselApple() {
       if (pauseTimerRef.current) {
         clearTimeout(pauseTimerRef.current);
       }
-    if (transitionTimerRef.current) {
-      clearTimeout(transitionTimerRef.current);
-    }
-    if (gestureTimeoutRef.current) {
-      clearTimeout(gestureTimeoutRef.current);
-    }
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+      if (gestureTimeoutRef.current) {
+        clearTimeout(gestureTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -139,6 +131,31 @@ export default function HeroCarouselApple() {
     ensureSlideReady(next);
     ensureSlideReady(prev);
   }, [activeIndex, ensureSlideReady, hasSlides, slides.length]);
+
+  useEffect(() => {
+    if (!hasSlides || typeof window === "undefined") {
+      return;
+    }
+    const head = window.document.head;
+    const links = slides.map((slide, index) => {
+      const link = window.document.createElement("link");
+      link.rel = "preload";
+      link.as = "image";
+      link.href = slide.mediaSrc;
+      if (index === 0) {
+        link.fetchPriority = "high";
+      }
+      head.appendChild(link);
+      return link;
+    });
+    return () => {
+      links.forEach((link) => {
+        if (link.parentNode === head) {
+          head.removeChild(link);
+        }
+      });
+    };
+  }, [hasSlides, slides]);
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -256,7 +273,6 @@ export default function HeroCarouselApple() {
     setIsDragging(false);
     heroRef.current?.releasePointerCapture?.(pointerId);
     releaseGestureLock();
-    setDebugState((prev) => ({ ...prev, dragging: false }));
   }, [releaseGestureLock]);
 
   const handlePointerDown = useCallback(
@@ -280,15 +296,6 @@ export default function HeroCarouselApple() {
       setIsDragging(true);
       heroRef.current?.setPointerCapture?.(event.pointerId);
       releaseGestureLock();
-      const target = event.target;
-      setDebugState((prev) => ({
-        ...prev,
-        pointerDowns: prev.pointerDowns + 1,
-        dragging: true,
-        navigated: false,
-        targetTag: target?.tagName ?? "",
-        targetClass: target?.className ?? ""
-      }));
     },
     [pauseAutoplay, releaseGestureLock]
   );
@@ -315,11 +322,6 @@ export default function HeroCarouselApple() {
         event.preventDefault();
       }
       pointerRef.current.delta = deltaX;
-      setDebugState((prev) => ({
-        ...prev,
-        pointerMoves: prev.pointerMoves + 1,
-        lastDx: deltaX
-      }));
       if (pointerRef.current.hasNavigated) {
         return;
       }
@@ -330,7 +332,6 @@ export default function HeroCarouselApple() {
         engageGestureLock();
         navigateTo(activeIndexRef.current + direction, true);
         finishDrag();
-        setDebugState((prev) => ({ ...prev, navigated: true }));
       }
     },
     [engageGestureLock, finishDrag, navigateTo]
@@ -373,25 +374,24 @@ export default function HeroCarouselApple() {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerCancel}
         >
-          <div className="hero-apple__debug">
-            ↓ {debugState.pointerDowns} • move {debugState.pointerMoves} • dx {Math.round(debugState.lastDx)}
-            • dragging {debugState.dragging ? "yes" : "no"} • navigated {debugState.navigated ? "yes" : "no"}
-            <br />
-            target: {debugState.targetTag || "—"} {debugState.targetClass ? `(${debugState.targetClass})` : ""}
-          </div>
       <div
         className="hero-apple__track"
         style={{ transform: `translate3d(-${activeIndex * 100}%, 0, 0)` }}
         ref={trackRef}
       >
-        {slides.map((slide) => (
-          <article className="hero-apple__slide" key={slide.id} aria-label={slide.title}>
+        {slides.map((slide, index) => (
+          <article
+            className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
+            key={slide.id}
+            aria-label={slide.title}
+          >
             <img
               src={slide.mediaSrc}
               alt={slide.title}
               className="hero-apple__image"
               loading="eager"
               decoding="async"
+              fetchPriority={index === 0 ? "high" : "auto"}
               draggable="false"
             />
             <div className="hero-apple__content">
