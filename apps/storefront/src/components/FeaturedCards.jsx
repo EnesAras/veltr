@@ -14,7 +14,7 @@ export default function FeaturedCards() {
           rel="preload"
           as="image"
           href={card.image}
-          imagesrcset=""
+          imageSrcSet=""
           crossOrigin="anonymous"
         />
       ))}

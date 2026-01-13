@@ -365,15 +365,14 @@ export default function HeroCarouselApple() {
           className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
           aria-label={slide.title}
         >
-          <img
-            src={slide.mediaSrc}
-            alt={slide.title}
-            className="hero-apple__image"
-            loading="eager"
-            decoding="async"
-            fetchPriority={index === 0 ? "high" : "auto"}
-            draggable="false"
-          />
+            <img
+              src={slide.mediaSrc}
+              alt={slide.title}
+              className="hero-apple__image"
+              loading="eager"
+              decoding="async"
+              draggable="false"
+            />
           <div className="hero-apple__content">
             <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
             <h1>{slide.title}</h1>
