@@ -357,6 +357,39 @@ export default function HeroCarouselApple() {
     [finishDrag]
   );
 
+  const slideNodes = useMemo(
+    () =>
+      slides.map((slide, index) => (
+        <article
+          key={slide.id}
+          className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
+          aria-label={slide.title}
+        >
+          <img
+            src={slide.mediaSrc}
+            alt={slide.title}
+            className="hero-apple__image"
+            loading="eager"
+            decoding="async"
+            fetchPriority={index === 0 ? "high" : "auto"}
+            draggable="false"
+          />
+          <div className="hero-apple__content">
+            <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
+            <h1>{slide.title}</h1>
+            <p className="hero-apple__subtitle">{slide.subtitle}</p>
+            <div className="hero-apple__actions">
+              <button type="button" className="v-btn v-btn--ghost">
+                {slide.cta}
+              </button>
+              <span className="hero-apple__hint">Autoplay · Muted · Infinite loop</span>
+            </div>
+          </div>
+        </article>
+      )),
+    [slides]
+  );
+
   if (!hasSlides) {
     return (
       <section className="hero-apple hero-apple--empty" aria-live="polite">
@@ -379,34 +412,7 @@ export default function HeroCarouselApple() {
         style={{ transform: `translate3d(-${activeIndex * 100}%, 0, 0)` }}
         ref={trackRef}
       >
-        {slides.map((slide, index) => (
-          <article
-            className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
-            key={slide.id}
-            aria-label={slide.title}
-          >
-            <img
-              src={slide.mediaSrc}
-              alt={slide.title}
-              className="hero-apple__image"
-              loading="eager"
-              decoding="async"
-              fetchPriority={index === 0 ? "high" : "auto"}
-              draggable="false"
-            />
-            <div className="hero-apple__content">
-              <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
-              <h1>{slide.title}</h1>
-              <p className="hero-apple__subtitle">{slide.subtitle}</p>
-              <div className="hero-apple__actions">
-                <button type="button" className="v-btn v-btn--ghost">
-                  {slide.cta}
-                </button>
-                <span className="hero-apple__hint">Autoplay · Muted · Infinite loop</span>
-              </div>
-            </div>
-          </article>
-        ))}
+        {slideNodes}
       </div>
       <div className="hero-apple__nav">
         <button type="button" onClick={prev} aria-label="Previous slide">

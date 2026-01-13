@@ -4,7 +4,7 @@ const HERO_IMAGES = [
     title: "Veltr Horizon",
     image: "/images/hero/hero-01.jpg",
     description: "Veltr Horizon – premium over-ear experience.",
-    textTheme: "light"
+    textTheme: "dark"
   },
   {
     id: "hero-02",
@@ -18,14 +18,14 @@ const HERO_IMAGES = [
     title: "Veltr Pulse",
     image: "/images/hero/hero-03.jpg",
     description: "Veltr Pulse – studio-ready headset.",
-    textTheme: "light"
+    textTheme: "cool"
   },
   {
     id: "hero-04",
     title: "Veltr Lumen",
     image: "/images/hero/hero-04.jpg",
     description: "Veltr Lumen – wireless case + dock.",
-    textTheme: "light"
+    textTheme: "warm"
   }
 ];
 
