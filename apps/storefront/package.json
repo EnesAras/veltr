@@ -3,10 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": "node -e \"console.log('Storefront: http://localhost:5173')\" && vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
+  "dev": "node -e \"console.log('Storefront: http://localhost:5173')\" && vite",
+  "build": "vite build",
+  "preview": "vite preview",
+  "images:all": "node scripts/generate-images.mjs",
+  "images:editorial": "node scripts/generate-images.mjs editorial",
+  "images:hero": "node scripts/generate-images.mjs hero",
+  "images:feature": "node scripts/generate-images.mjs feature",
+  "images:products6": "node scripts/generate-images.mjs products6"
+},
+
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -14,6 +20,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
+    "sharp": "^0.34.5",
     "vite": "^5.0.0"
   }
 }

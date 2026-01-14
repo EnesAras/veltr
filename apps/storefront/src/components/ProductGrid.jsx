@@ -8,6 +8,31 @@ import { SHOWCASE_TILES, FALLBACK_IMAGE } from "../../../../shared/data/products
 import { PRODUCTS } from "../data/products.js";
 
 const limit = 8;
+const IMAGE_WIDTHS = [1200, 1600, 2000];
+const RESPONSIVE_PRODUCT_IDS = new Set([
+  "veltr-elite",
+  "veltr-air",
+  "veltr-lite",
+  "veltr-noise-x",
+  "veltr-studio",
+  "veltr-studio-pro"
+]);
+const getImageBase = (src) => (src ? src.replace(/\.(png|jpe?g)$/i, "") : "");
+const buildVariantSrc = (src, format, width) => {
+  const base = getImageBase(src);
+  return base ? `${base}-${width}.${format}` : src;
+};
+const buildSrcSet = (src, format) => {
+  const base = getImageBase(src);
+  if (!base) {
+    return "";
+  }
+  return IMAGE_WIDTHS.map((width) => `${base}-${width}.${format} ${width}w`).join(", ");
+};
+const buildFallbackSrc = (src) => {
+  const base = getImageBase(src);
+  return base ? `${base}-1600.jpg` : src;
+};
 
 export default function ProductGrid({ initialCategory }) {
   const [search, setSearch] = useState("");
@@ -78,6 +103,24 @@ export default function ProductGrid({ initialCategory }) {
   const visibleProducts = filteredProducts.slice((page - 1) * limit, page * limit);
   const hasProducts = visibleProducts.length > 0;
 
+  const preloadProductLinks = useMemo(
+    () =>
+      visibleProducts.slice(0, 3).map((product) => (
+        <link
+          key={`preload-prod-${product.id}`}
+          rel="preload"
+          as="image"
+          href={
+            RESPONSIVE_PRODUCT_IDS.has(product.id)
+              ? buildVariantSrc(product.image, "avif", 1600)
+              : product.image
+          }
+          type={RESPONSIVE_PRODUCT_IDS.has(product.id) ? "image/avif" : undefined}
+        />
+      )),
+    [visibleProducts]
+  );
+
   function handleCategoryLink(slug) {
     if (slug) {
       navigate(`/category/${slug}`);
@@ -108,6 +151,12 @@ export default function ProductGrid({ initialCategory }) {
     }
   };
 
+  const handleProductImageLoad = (event) => {
+    const image = event.currentTarget;
+    image.classList.add("is-loaded");
+    image.closest(".product-image")?.classList.add("is-loaded");
+  };
+
   const getStockBadge = (stock) => {
     if (stock <= 0) {
       return { label: "Out of stock", variant: "out" };
@@ -126,6 +175,7 @@ export default function ProductGrid({ initialCategory }) {
 
         <section className="v-section v-section--tight">
           <div className="v-container">
+            {preloadProductLinks}
             <section className="audio-showcase" aria-label="VELTR audio highlights">
               {SHOWCASE_TILES.map((tile) => (
                 <article key={tile.id} className="audio-showcase__tile">
@@ -144,16 +194,23 @@ export default function ProductGrid({ initialCategory }) {
                   </div>
                   <div className="audio-showcase__media">
                     <div className="audio-showcase__media-inner">
-                      <img
-                        src={tile.image}
-                        alt={tile.title}
-                        loading="lazy"
-                        onError={handleTileImageError}
-                        style={{
-                          objectPosition: tile.imagePosition ?? "center",
-                          "--tile-scale": tile.imageScale ?? 1
-                        }}
-                      />
+                      <picture>
+                        <source type="image/avif" srcSet={buildSrcSet(tile.image, "avif")} sizes="100vw" />
+                        <source type="image/webp" srcSet={buildSrcSet(tile.image, "webp")} sizes="100vw" />
+                        <img
+                          src={buildFallbackSrc(tile.image)}
+                          alt={tile.title}
+                          loading="lazy"
+                          decoding="async"
+                          width="1024"
+                          height="1536"
+                          onError={handleTileImageError}
+                          style={{
+                            objectPosition: tile.imagePosition ?? "center",
+                            "--tile-scale": tile.imageScale ?? 1
+                          }}
+                        />
+                      </picture>
                     </div>
                   </div>
                 </article>
@@ -245,19 +302,46 @@ export default function ProductGrid({ initialCategory }) {
               )}
 
           {hasProducts &&
-            visibleProducts.map((product) => {
-              console.log("PRODUCT_IMAGE", product.slug, product.image);
+            visibleProducts.map((product, index) => {
                   const stock = product.inStock ?? 0;
                   const badge = getStockBadge(stock);
                   const isOutOfStock = stock <= 0;
                   const ratingValue = Number.isFinite(product.rating) ? product.rating : 0;
                   const ratingCount = product.reviewsCount ?? 0;
                   const filledStars = Math.round(ratingValue);
+                  const isResponsive = RESPONSIVE_PRODUCT_IDS.has(product.id);
+                  const isAboveFold = index < 6;
                   return (
                     <article key={product.id} className="product-card">
                       <Link to={`/product/${product.slug}`} className="product-card__link">
                         <div className="product-image">
-                          <img src={product.image} alt={product.name} loading="lazy" onError={handleTileImageError} />
+                          {isResponsive ? (
+                            <picture>
+                              <source type="image/avif" srcSet={buildSrcSet(product.image, "avif")} sizes="100vw" />
+                              <source type="image/webp" srcSet={buildSrcSet(product.image, "webp")} sizes="100vw" />
+                              <img
+                                src={buildFallbackSrc(product.image)}
+                                alt={product.name}
+                                loading={isAboveFold ? "eager" : "lazy"}
+                                decoding="async"
+                                width="1024"
+                                height="1536"
+                                onError={handleTileImageError}
+                                onLoad={handleProductImageLoad}
+                              />
+                            </picture>
+                          ) : (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              loading={isAboveFold ? "eager" : "lazy"}
+                              decoding="async"
+                              width="1024"
+                              height="1536"
+                              onError={handleTileImageError}
+                              onLoad={handleProductImageLoad}
+                            />
+                          )}
                           {badge && (
                             <span className={`product-badge product-badge--${badge.variant}`}>{badge.label}</span>
                           )}

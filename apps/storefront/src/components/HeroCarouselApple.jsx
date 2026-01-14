@@ -5,6 +5,20 @@ const AUTOPLAY_DELAY = 7500;
 const TRANSITION_DURATION = 520;
 const MIN_SWIPE_THRESHOLD = 55;
 const SWIPE_THRESHOLD_FACTOR = 0.06;
+const IMAGE_WIDTHS = [1200, 1600, 2000];
+
+const getImageBase = (src) => (src ? src.replace(/\.(png|jpe?g)$/i, "") : "");
+const buildSrcSet = (src, format) => {
+  const base = getImageBase(src);
+  if (!base) {
+    return "";
+  }
+  return IMAGE_WIDTHS.map((width) => `${base}-${width}.${format} ${width}w`).join(", ");
+};
+const buildFallbackSrc = (src) => {
+  const base = getImageBase(src);
+  return base ? `${base}-1600.jpg` : src;
+};
 
 function normalizeSlides() {
   return HERO_IMAGES.map((slide, index) => ({
@@ -44,9 +58,6 @@ export default function HeroCarouselApple() {
   const trackRef = useRef(null);
   const heroRef = useRef(null);
   const mountedRef = useRef(true);
-  const loadedMapRef = useRef({});
-  const loadingPromiseRef = useRef({});
-
   useEffect(() => {
     return () => {
       mountedRef.current = false;
@@ -61,101 +72,6 @@ export default function HeroCarouselApple() {
       }
     };
   }, []);
-
-  const preloadImage = useCallback((url) => {
-    if (!url) {
-      return Promise.resolve();
-    }
-    if (typeof window === "undefined") {
-      loadedMapRef.current[url] = true;
-      return Promise.resolve();
-    }
-    if (loadedMapRef.current[url]) {
-      return Promise.resolve();
-    }
-    if (loadingPromiseRef.current[url]) {
-      return loadingPromiseRef.current[url];
-    }
-    const promise = new Promise((resolve) => {
-      const img = new window.Image();
-      const done = () => {
-        loadedMapRef.current[url] = true;
-        delete loadingPromiseRef.current[url];
-        resolve();
-      };
-      img.onload = done;
-      img.onerror = done;
-      img.src = url;
-      if (img.decode) {
-        img
-          .decode()
-          .then(done)
-          .catch(done);
-      }
-    });
-    loadingPromiseRef.current[url] = promise;
-    return promise;
-  }, []);
-
-  const ensureSlideReady = useCallback(
-    (index) => {
-      if (!hasSlides) {
-        return Promise.resolve();
-      }
-      const slide = slides[(index + slides.length) % slides.length];
-      if (!slide) {
-        return Promise.resolve();
-      }
-      return preloadImage(slide.mediaSrc);
-    },
-    [hasSlides, slides, preloadImage]
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    slides.forEach((slide) => {
-      if (slide.mediaSrc) {
-        preloadImage(slide.mediaSrc);
-      }
-    });
-  }, [preloadImage, slides]);
-
-  useEffect(() => {
-    if (!hasSlides) {
-      return;
-    }
-    const next = (activeIndex + 1) % slides.length;
-    const prev = (activeIndex - 1 + slides.length) % slides.length;
-    ensureSlideReady(next);
-    ensureSlideReady(prev);
-  }, [activeIndex, ensureSlideReady, hasSlides, slides.length]);
-
-  useEffect(() => {
-    if (!hasSlides || typeof window === "undefined") {
-      return;
-    }
-    const head = window.document.head;
-    const links = slides.map((slide, index) => {
-      const link = window.document.createElement("link");
-      link.rel = "preload";
-      link.as = "image";
-      link.href = slide.mediaSrc;
-      if (index === 0) {
-        link.fetchPriority = "high";
-      }
-      head.appendChild(link);
-      return link;
-    });
-    return () => {
-      links.forEach((link) => {
-        if (link.parentNode === head) {
-          head.removeChild(link);
-        }
-      });
-    };
-  }, [hasSlides, slides]);
 
   useEffect(() => {
     activeIndexRef.current = activeIndex;
@@ -191,7 +107,6 @@ export default function HeroCarouselApple() {
       }
       setIsTransitioning(true);
       setActiveIndex(safeIndex);
-      ensureSlideReady(safeIndex);
       if (transitionTimerRef.current) {
         clearTimeout(transitionTimerRef.current);
       }
@@ -205,7 +120,7 @@ export default function HeroCarouselApple() {
         setIsTransitioning(false);
       }
     },
-    [activeIndex, ensureSlideReady, hasSlides, pauseAutoplay, slides.length]
+    [activeIndex, hasSlides, pauseAutoplay, slides.length]
   );
 
   const goTo = useCallback(
@@ -359,34 +274,44 @@ export default function HeroCarouselApple() {
 
   const slideNodes = useMemo(
     () =>
-      slides.map((slide, index) => (
-        <article
-          key={slide.id}
-          className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
-          aria-label={slide.title}
-        >
-            <img
-              src={slide.mediaSrc}
-              alt={slide.title}
-              className="hero-apple__image"
-              loading="eager"
-              decoding="async"
-              draggable="false"
-            />
-          <div className="hero-apple__content">
-            <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
-            <h1>{slide.title}</h1>
-            <p className="hero-apple__subtitle">{slide.subtitle}</p>
-            <div className="hero-apple__actions">
-              <button type="button" className="v-btn v-btn--ghost">
-                {slide.cta}
-              </button>
-              <span className="hero-apple__hint">Autoplay · Muted · Infinite loop</span>
+      slides.map((slide, index) => {
+        const isActive = index === activeIndex;
+        return (
+          <article
+            key={slide.id}
+            className={`hero-apple__slide hero-apple__slide--${slide.textTheme}`}
+            aria-label={slide.title}
+          >
+            <picture>
+              <source type="image/avif" srcSet={buildSrcSet(slide.mediaSrc, "avif")} sizes="100vw" />
+              <source type="image/webp" srcSet={buildSrcSet(slide.mediaSrc, "webp")} sizes="100vw" />
+              <img
+                src={buildFallbackSrc(slide.mediaSrc)}
+                alt={slide.title}
+                className="hero-apple__image"
+                loading={isActive ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={isActive ? "high" : "auto"}
+                draggable="false"
+                width="4997"
+                height="3331"
+              />
+            </picture>
+            <div className="hero-apple__content">
+              <p className="hero-apple__eyebrow">{slide.eyebrow}</p>
+              <h1>{slide.title}</h1>
+              <p className="hero-apple__subtitle">{slide.subtitle}</p>
+              <div className="hero-apple__actions">
+                <button type="button" className="v-btn v-btn--ghost">
+                  {slide.cta}
+                </button>
+                <span className="hero-apple__hint">Autoplay · Muted · Infinite loop</span>
+              </div>
             </div>
-          </div>
-        </article>
-      )),
-    [slides]
+          </article>
+        );
+      }),
+    [activeIndex, slides]
   );
 
   if (!hasSlides) {

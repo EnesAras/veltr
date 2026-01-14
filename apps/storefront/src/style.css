@@ -962,25 +962,40 @@ a {
 .featured-card__background {
   position: relative;
   height: clamp(360px, 45vw, 460px);
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(130deg, #f8f9fb 0%, #eef1fa 60%, #dfe3ef 100%);
+  overflow: hidden;
   transition: transform 0.35s ease;
   will-change: transform;
-  background-color: #050508;
 }
 
 .featured-card__background::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.08), rgba(5, 5, 8, 0.7));
-  opacity: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.65), rgba(244, 245, 250, 0));
+  opacity: 1;
   transition: opacity 0.35s ease;
   pointer-events: none;
+  z-index: 0;
 }
 
-.featured-card--lazy .featured-card__background::before {
-  opacity: 0.7;
+.featured-card__background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.8));
+  opacity: 1;
+  animation: shimmer 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+  transform: translateX(-100%);
+  will-change: transform;
+}
+
+.featured-card__background.is-loaded::after,
+.featured-card__background.is-loaded::before {
+  opacity: 0;
+  animation: none;
 }
 
 .featured-card__image {
@@ -991,10 +1006,17 @@ a {
   object-fit: cover;
   object-position: center;
   display: block;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  z-index: 1;
 }
 
 .featured-card--studio .featured-card__image {
   object-position: 50% 40%;
+}
+
+.featured-card__image.is-loaded {
+  opacity: 1;
 }
 
 .featured-card__link:hover .featured-card__background,
@@ -1006,6 +1028,7 @@ a {
   position: absolute;
   inset: 0;
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(2, 6, 23, 0.75));
+  z-index: 2;
 }
 
 .featured-card__copy {
@@ -1017,6 +1040,7 @@ a {
   padding: clamp(1.5rem, 2.5vw, 2rem);
   color: #fff;
   gap: 0.5rem;
+  z-index: 3;
 }
 
 .featured-card__tag {
@@ -1381,6 +1405,15 @@ h1 {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 .product-card {
   border-radius: var(--radius-lg);
   background: #fff;
@@ -1408,6 +1441,50 @@ h1 {
   flex-direction: column;
   text-decoration: none;
   color: inherit;
+}
+
+.product-image {
+  position: relative;
+  background: linear-gradient(145deg, #f8f8fb, #ecf0f6 45%, #dfe3ee 100%);
+  min-height: clamp(180px, 25vw, 240px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.product-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.05));
+  opacity: 1;
+  pointer-events: none;
+  animation: shimmer 1.8s ease-in-out infinite;
+  z-index: 1;
+  transform: translateX(-100%);
+  will-change: transform;
+}
+
+.product-image.is-loaded::after {
+  opacity: 0;
+  animation: none;
+}
+
+.product-image img {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  display: block;
+  z-index: 2;
+}
+
+.product-image img.is-loaded {
+  opacity: 1;
 }
 
 .skeleton-card {
