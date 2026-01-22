@@ -47,12 +47,12 @@ export default function FeaturedCards() {
             <h2 className="v-h2">VELTR stories in motion</h2>
           </div>
           <div className="featured-cards__rail">
-            {FEATURED_CARDS.map((card, index) => (
+            {FEATURED_CARDS.map((card, index) => {
+              const isStudioCard = card.id === "veltr-editorial-2";
+              return (
               <article
                 key={card.id}
-                className={`featured-card ${card.id === "veltr-editorial-2" ? "featured-card--studio" : ""} ${
-                  index >= PRELOAD_COUNT ? "featured-card--lazy" : ""
-                }`}
+                className={`featured-card ${index >= PRELOAD_COUNT ? "featured-card--lazy" : ""}`}
               >
                 <Link to={card.link} className="featured-card__link">
                   <div className="featured-card__background">
@@ -63,6 +63,7 @@ export default function FeaturedCards() {
                         className="featured-card__image"
                         src={buildFallbackSrc(card.image)}
                         alt={card.title}
+                        style={isStudioCard ? { objectPosition: "50% 40%" } : undefined}
                         loading={index < PRELOAD_COUNT ? "eager" : "lazy"}
                         decoding="async"
                         width="2000"
@@ -79,7 +80,8 @@ export default function FeaturedCards() {
                   </div>
                 </Link>
               </article>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
